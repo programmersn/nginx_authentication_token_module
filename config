@@ -1,17 +1,16 @@
-ngx_addon_dir="nginx_auth_token_module"
+#ngx_addon_dir="ngx_http_auth_token_module"
+ngx_module_name="ngx_http_auth_token_module"
 
 if test -n "$ngx_module_link"; then   
     # Dynamic Module Support
     ngx_module_type=HTTP
-    ngx_module_name=ngx_http_auth_token_module
     ngx_module_srcs="$ngx_addon_dir/ngx_http_auth_token_module.c"
 
     . auto/module
 
 else 
-    # Static Module Support
+   # Static Module Support
     HTTP_MODULES="$HTTP_MODULES ngx_http_auth_token_module"
-    NGX_ADDON_SRCS="$NGINX_ADDON_SRCS $ngx_addon_dir/ngx_http_auth_token_module.c"
+    NGX_ADDON_SRCS="$NGX_ADDON_SRCS $ngx_addon_dir/ngx_http_auth_token_module.c"
 fi
 
-ngx_addon_name="$ngx_module_name"

@@ -18,14 +18,14 @@ namespace :nginx do
 
   desc "Recompiles nginx"
   task :compile do 
-    sh "./nginx-compile.sh"
+    sh "./scripts/nginx-compile.sh"
   end
 end
 
 desc "Bootstraps the local development environment"
 task :bootstrap do 
   unless Dir.exists?("build") and Dir.exists?("vendor") 
-    sh "./nginx-bootstrap.sh"
+    sh "./scripts/nginx-bootstrap.sh"
   end
 end
 
