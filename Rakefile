@@ -13,7 +13,7 @@ namespace :nginx do
 
   desc "Stops nginx"
   task :stop do  
-    `./build/nginx/sbin/nginx -s stop`
+    `./build/nginx/sbin/nginx -s stop || pkill nginx`
   end
 
 desc "Restart nginx"
