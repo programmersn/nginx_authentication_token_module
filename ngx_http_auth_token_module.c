@@ -6,9 +6,6 @@
 #include <string.h>
 #include <hiredis/hiredis.h>
 
-#define REDIS_IP "localhost"
-#define REDIS_PORT 6379
-
 static ngx_int_t ngx_http_auth_token_init(ngx_conf_t *);
 static void *ngx_http_auth_token_create_main_conf(ngx_conf_t *);
 typedef struct auth_token_main_conf_s
@@ -125,13 +122,13 @@ lookup_user(ngx_str_t *userId, ngx_str_t *authToken, ngx_http_request_t *request
 }
 
 static ngx_int_t
-redirect(ngx_table_elt_t *outHeaderElt, ngx_log_t *log, auth_token_main_conf_t *mainConf)
+redirect(ngx_table_elt_t *authTokenHeaderElt, ngx_log_t *log, auth_token_main_conf_t *mainConf)
 {
     ngx_log_error(NGX_LOG_DEBUG, log, 0,
                   "==> Entering %s\n", __FUNCTION__);
 
-    ngx_str_set(&outHeaderElt->key, "Location");
-    outHeaderElt->value = mainConf->redirect_location;
+    ngx_str_set(&authTokenHeaderElt->key, "Location");
+    authTokenHeaderElt->value = mainConf->redirect_location;
 
     ngx_log_error(NGX_LOG_DEBUG, log, 0, "<== Exiting %s\n", __FUNCTION__);
 
@@ -139,22 +136,22 @@ redirect(ngx_table_elt_t *outHeaderElt, ngx_log_t *log, auth_token_main_conf_t *
 }
 
 static void
-appendOutHeaderElt(ngx_table_elt_t *outHeaderElt,
-                   ngx_str_t *outHeaderKey,
-                   ngx_str_t *outHeaderValue,
-                   ngx_log_t *log)
+initHeaderElt(ngx_table_elt_t *authTokenHeaderElt,
+              ngx_str_t *headerKey,
+              ngx_str_t *headerValue,
+              ngx_log_t *log)
 {
     ngx_log_error(NGX_LOG_DEBUG, log, 0,
                   "==> Entering %s\n", __FUNCTION__);
 
-    outHeaderElt->key = *outHeaderKey;
-    outHeaderElt->value = *outHeaderValue;
+    authTokenHeaderElt->key = *headerKey;
+    authTokenHeaderElt->value = *headerValue;
 
     ngx_log_error(NGX_LOG_DEBUG, log, 0,
-                  "Appended this header to the response's outgoing headers list :\n"
+                  "Initilization of following header done :\n"
                   "\toutHeaderElt->key->len  = %d\n"
                   "\toutHeaderElt->key->data = %s\n",
-                  outHeaderElt->key.len, outHeaderElt->key.data);
+                  authTokenHeaderElt->key.len, authTokenHeaderElt->key.data);
 
     ngx_log_error(NGX_LOG_DEBUG, log, 0,
                   "<== Exiting %s\n", __FUNCTION__);
@@ -192,20 +189,18 @@ ngx_http_auth_token_handler(ngx_http_request_t *request)
     ngx_log_error(NGX_LOG_DEBUG, request->connection->log, 0,
                   "Just parsed request headers for cookie\n");
 
-    /* Allocates and add a new header to the request's response's headers list, 
-        then assign it to nginx hash table */
-    ngx_table_elt_t *outHeaderElt = ngx_list_push(&request->headers_out.headers);
+    /* Allocates and add a new header to the request's headers list, then assign it to nginx hash table */
+    ngx_table_elt_t *authTokenHeaderElt = ngx_list_push(&request->headers_in.headers);
 
-    // Set to 1 in the nginx hash table to indicate to nginx that the element
-    // is to be used
-    outHeaderElt->hash = 1;
+    // Set to 1 in the nginx hash table to indicate to nginx that the element is to be used
+    authTokenHeaderElt->hash = 1;
 
     if (NGX_DECLINED == authTokenCookieIndex) // Cookie not found
     {
         ngx_log_error(NGX_LOG_ERR, request->connection->log, 0,
                       "cookie header %s not found in request's incoming headers\n",
                       authTokenCookie.data);
-        return redirect(outHeaderElt, request->connection->log, mainConf);
+        return redirect(authTokenHeaderElt, request->connection->log, mainConf);
     }
 
     ngx_str_t userId;
@@ -216,13 +211,13 @@ ngx_http_auth_token_handler(ngx_http_request_t *request)
         ngx_log_error(NGX_LOG_DEBUG, request->connection->log, 0,
                       "user corresponding to auth cookie %s not found in Redis backend DB\n",
                       authTokenCookieValue.data);
-        return redirect(outHeaderElt, request->connection->log, mainConf);
+        return redirect(authTokenHeaderElt, request->connection->log, mainConf);
     }
 
-    appendOutHeaderElt(outHeaderElt,
-                       &(ngx_str_t)ngx_string("User-ID"),
-                       &userId,
-                       request->connection->log);
+    initHeaderElt(authTokenHeaderElt,
+                  &(ngx_str_t)ngx_string("User-ID"),
+                  &userId,
+                  request->connection->log);
 
     ngx_log_error(NGX_LOG_DEBUG, request->connection->log, 0,
                   "<== Exiting %s\n", __FUNCTION__);
